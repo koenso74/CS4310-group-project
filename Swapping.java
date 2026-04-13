@@ -4,9 +4,17 @@ public class Swapping {
         System.out.println(l);
         l.addProcessAt(1, 1000, 500);
         System.out.println(l);
-        l.addProcessAt(1, 100, 300);
+        l.addProcessAt(2, 100, 300);
         System.out.println(l);
-        l.firstFitAdd(1, 100);
+        l.addProcessAt(3, 200, 300);
         System.out.println(l);
+    }
+
+    public static void swap(){
+
+    }
+
+    public static void compact(){
+
     }
 }

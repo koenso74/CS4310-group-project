@@ -1,64 +1,61 @@
 import java.util.LinkedList;
-public class MemoryProcessList{
+
+public class MemoryProcessList {
     private LinkedList<MyProcess> processChain;
     private double spaceRemaining;
     private final double MAX_SPACE;
 
-    public MemoryProcessList(double max){
+    public MemoryProcessList(double max) {
         MAX_SPACE = max;
         spaceRemaining = max;
         processChain = new LinkedList<>();
         processChain.add(new MyProcess(0, max, true));
     }
 
-    private void combine(){
-        for(int i = 0; i < processChain.size()-1; i++){
-            if(processChain.get(i).isAvailble && processChain.get(i+1).isAvailble){
+    private void combine() {
+        for (int i = 0; i < processChain.size() - 1; i++) {
+            if (processChain.get(i).isAvailble && processChain.get(i + 1).isAvailble) {
                 MyProcess old = processChain.remove(i);
                 processChain.get(i).memoryUse += old.memoryUse;
             }
         }
     }
 
-    public void addProcessAt(int id, double memory, double start){
+    public void addProcessAt(int id, double memory, double start) {
         int i = 0;
         boolean foundIndex = false;
         double begin = 0.0;
         double end = 0.0;
-        while(i < processChain.size() && !foundIndex){
-            if(start <= processChain.get(i).memoryUse){
+        while (i < processChain.size() && !foundIndex) {
+            if (start <= processChain.get(i).memoryUse) {
                 foundIndex = true;
                 end = begin + processChain.get(i).memoryUse;
-            }
-            else{
+            } else {
                 begin += processChain.get(i).memoryUse;
                 i++;
             }
         }
 
-        if(!foundIndex){
+        if (!foundIndex) {
             System.out.println("Index Not Found");
-        }
-        else{
-            if(start == end){
+        } else {
+            if (start == end) {
                 processChain.get(i).memoryUse -= memory;
-                if(processChain.get(i).memoryUse <= 0){
+                if (processChain.get(i).memoryUse <= 0) {
                     processChain.remove(i);
                 }
                 spaceRemaining -= memory;
-                processChain.add(i+1, new MyProcess(1, memory, false));
-            }
-            else if (start == begin){
+                processChain.add(i + 1, new MyProcess(1, memory, false));
+            } else if (start == begin) {
                 processChain.get(i).memoryUse -= memory;
-                if(processChain.get(i).memoryUse <= 0){
+                if (processChain.get(i).memoryUse <= 0) {
                     processChain.remove(i);
                 }
                 spaceRemaining -= memory;
                 processChain.add(i, new MyProcess(1, memory, false));
-            }
-            else{
+            } else if (start > begin && start < end) {
                 processChain.get(i).memoryUse -= memory;
-                if(processChain.get(i).memoryUse <= 0){
+                if (processChain.get(i).memoryUse <= 0) {
                     processChain.remove(i);
 
                 }
@@ -72,30 +69,36 @@ public class MemoryProcessList{
                 i++;
                 processChain.add(i, new MyProcess(id, pToEnd, true));
             }
+            else{
+                firstFitAdd(id, memory);
+            }
             combine();
         }
     }
 
-    public void firstFitAdd(int id, double memory){
-        MyProcess newP = new MyProcess(id, memory, false); //Creates new process
-        boolean hasFound = false; //Loop Cond
-        int i = 0; //Loop Cond
+    public void firstFitAdd(int id, double memory) {
+        MyProcess newP = new MyProcess(id, memory, false);
+        boolean hasFound = false;
+        int i = 0;
 
-        //Check for the first spot to put in
-        while(i < processChain.size() && !hasFound){
+        while (i < processChain.size() && !hasFound) {
             MyProcess cur = processChain.get(i);
 
-            //Check current process. If true, then update
-            if(cur.isAvailble && cur.memoryUse >= memory){
-                cur.memoryUse -= memory;
-                if(cur.memoryUse <= 0){
-                    processChain.remove(i);
+            if (cur.isAvailble && cur.memoryUse >= memory) {
+                if (cur.memoryUse == memory) {
+                    processChain.set(i, newP);
                 }
+                else {
+                    cur.memoryUse -= memory;
+                    processChain.add(i, newP);
+                }
+
                 spaceRemaining -= memory;
-                processChain.add(newP);
+                hasFound = true;
             }
             i++;
         }
+
         combine();
     }
 
@@ -107,29 +110,40 @@ public class MemoryProcessList{
         return MAX_SPACE;
     }
 
-    public MyProcess getProcessAt(int index){
+    public MyProcess getProcessAt(int index) {
         return processChain.get(index);
     }
 
-    public int getProcessID(int index){
+    public int getProcessID(int index) {
         return processChain.get(index).PID;
     }
 
-    public double getProcessMemoryUse(int index){
+    public double getProcessMemoryUse(int index) {
         return processChain.get(index).memoryUse;
     }
 
-    public boolean getProcessAvailblity(int index){
+    public boolean getProcessAvailblity(int index) {
         return processChain.get(index).isAvailble;
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         String list = "[ ";
-        for(int i = 0; i < processChain.size()-1; i++){
-            list += "("+processChain.get(i).PID+":"+processChain.get(i).memoryUse+":"+processChain.get(i).isAvailble+") , ";
+        for (int i = 0; i < processChain.size() - 1; i++) {
+            if (processChain.get(i).isAvailble) {
+                list += "(" + processChain.get(i).PID + ":" + processChain.get(i).memoryUse + ":Hole) , ";
+            } else {
+                list += "(" + processChain.get(i).PID + ":" + processChain.get(i).memoryUse + ":Occupied) , ";
+
+            }
         }
-        list += "("+processChain.get(processChain.size()-1).PID+":"+processChain.get(processChain.size()-1).memoryUse+":"+processChain.get(processChain.size()-1).isAvailble+") ]";
+        if (processChain.get(processChain.size() - 1).isAvailble) {
+            list += "(" + processChain.get(processChain.size() - 1).PID + ":"
+                    + processChain.get(processChain.size() - 1).memoryUse + ":Hole) ]";
+        } else {
+            list += "(" + processChain.get(processChain.size() - 1).PID + ":"
+                    + processChain.get(processChain.size() - 1).memoryUse + ":Occupied) ]";
+        }
         return list;
     }
 
@@ -138,11 +152,10 @@ public class MemoryProcessList{
         double memoryUse;
         boolean isAvailble;
 
-        MyProcess(int id, double memory, boolean bool){
+        MyProcess(int id, double memory, boolean bool) {
             PID = id;
             memoryUse = memory;
             isAvailble = bool;
         }
     }
 }
-
