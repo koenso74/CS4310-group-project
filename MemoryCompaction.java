@@ -21,7 +21,7 @@ public class MemoryCompaction {
             totalUsed += p.memoryUse;
         }
         
-        // Calculate available space at beginning
+        // Calculate available space
         double emptySpaceAtStart = memoryList.getMAX_SPACE() - totalUsed;
         
         // Build new process chain
@@ -44,70 +44,63 @@ public class MemoryCompaction {
     }
 
     public static void compactUntilLargeHole(MemoryProcessList memoryList, double processSize) {
-
+        // Exit if there isn't enough space for the process
         if (memoryList.getSpaceRemaining() < processSize) {
             System.out.println("Not enough total free space");
             return;
         }
-        
-        // Find current largest hole
-        double largestHole = findLargestHole(memoryList);
-        
-        // Hole is large enough, exit
-        if (largestHole >= processSize) { 
-            return;
-        }
-        
+
         // Get current process chain
         LinkedList<MemoryProcessList.MyProcess> currentChain = memoryList.getProcessChain();
         
-        // Collect allocated processes in the chain
-        LinkedList<MemoryProcessList.MyProcess> allocated = new LinkedList<>();
-        for (MemoryProcessList.MyProcess p : currentChain) {
-            if (!p.isAvailble) {
-                allocated.add(p);
+        double accumulatedFree = 0;
+        int splitIndex = currentChain.size();
+        // Scan from right side for free space until combined free space blocks can fit the new process
+        for (int i = currentChain.size() - 1; i >= 0; i--) {
+            MemoryProcessList.MyProcess block = currentChain.get(i);
+            if (block.isAvailble) {
+                accumulatedFree += block.memoryUse;
+                splitIndex = i;
+                if (accumulatedFree >= processSize) {
+                    break;
+                }
             }
         }
 
-        // Calculate total used memory
-        double totalUsed = 0;
-        for (MemoryProcessList.MyProcess p : allocated) {
-            totalUsed += p.memoryUse;
-        }
-        
-        double freeSpaceAtStart = memoryList.getMAX_SPACE() - totalUsed;
-        
-        // Build new compacted layout
+        // Build new process chain
         LinkedList<MemoryProcessList.MyProcess> newChain = new LinkedList<>();
         
-        if (freeSpaceAtStart > 0) {
-            MemoryProcessList.MyProcess freeBlock = memoryList.new MyProcess(0, freeSpaceAtStart, true);
-            newChain.add(freeBlock);
+        double totalFreeSpace = 0;
+        // Add processes and free space before the split point
+        for (int i = 0; i < splitIndex; i++) {
+            MemoryProcessList.MyProcess block = currentChain.get(i);
+            newChain.add(block);
+            if (block.isAvailble) {
+                totalFreeSpace += block.memoryUse;
+            }
         }
+        totalFreeSpace += accumulatedFree;
         
-        newChain.addAll(allocated);
+        // Add the accumulated free space as one block
+        newChain.add(memoryList.new MyProcess(0, accumulatedFree, true));
         
-        memoryList.setProcessChain(newChain);
-        memoryList.setSpaceRemaining(freeSpaceAtStart);
-    }
-
-    private static double findLargestHole(MemoryProcessList memory) {
-        double largest = 0;
-        
-        for (MemoryProcessList.MyProcess p : memory.getProcessChain()) {
-            if (p.isAvailble && p.memoryUse > largest) {
-                largest = p.memoryUse;
+        // Add all processes to the right of the split index after the free space block
+        for (int i = splitIndex; i < currentChain.size(); i++) {
+            if (!currentChain.get(i).isAvailble) {
+                newChain.add(currentChain.get(i));
             }
         }
         
-        return largest;
+        // Update memory
+        memoryList.setProcessChain(newChain);
+        memoryList.setSpaceRemaining(totalFreeSpace);
     }
 
     public static void main(String[] args) {
         MemoryProcessList memory = new MemoryProcessList(1000);
         memory.addProcessAt(1, 200, 0);
         memory.addProcessAt(2, 300, 300);
-        memory.addProcessAt(3, 150, 700);
+        memory.addProcessAt(3, 100, 700);
         
         displayMemoryLayout(memory);
 
