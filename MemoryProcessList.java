@@ -130,6 +130,18 @@ public class MemoryProcessList {
         return processChain.get(index).isAvailble;
     }
 
+    public LinkedList<MyProcess> getProcessChain() { 
+        return processChain; 
+    }
+
+    public void setProcessChain(LinkedList<MyProcess> newChain) {
+        this.processChain = newChain;
+    }
+
+    public void setSpaceRemaining(double space) {
+        this.spaceRemaining = space;
+    }
+
     @Override
     public String toString() {
         String list = "[ ";
