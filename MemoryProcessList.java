@@ -25,62 +25,75 @@ public class MemoryProcessList {
         }
     }
 
-    public void addProcessAt(int id, double memory, double start) {
-        int i = 0;
-        boolean foundIndex = false;
-        double begin = 0.0;
-        double end = 0.0;
-        while (i < processChain.size() && !foundIndex) {
-            if (start <= processChain.get(i).memoryUse) {
-                foundIndex = true;
-                end = begin + processChain.get(i).memoryUse;
-            } else {
-                begin += processChain.get(i).memoryUse;
-                i++;
+    public boolean addProcessAt(int id, double memory, double start) {
+        if (memory <= spaceRemaining) {
+            // find the index of starting
+            boolean hasFound = false;
+            int curInd = 0;
+            double begin = 0;
+            double end = 0;
+            while (curInd < processChain.size() && !hasFound) {
+                end = begin + processChain.get(curInd).memoryUse;
+                if (start >= begin && start < end) {
+                    hasFound = true;
+                } else {
+                    begin = end;
+                    curInd++;
+                }
             }
-        }
 
-        if (!foundIndex) {
-            System.out.println("Index Not Found");
+            // Unsuccessful Search
+            if (!hasFound) {
+                return false;
+            }
+
+            // Not a Hole Case
+            if (!processChain.get(curInd).isAvailble) {
+                return false;
+            }
+
+            // Check if the allocation fits
+            if (start + memory > end) {
+                return false;
+            }
+
+            double leftNode = start - begin;
+            double rightNode = end - (start + memory);
+
+            // Check if it is a perfect fit
+            if (leftNode == 0 && rightNode == 0) {
+                processChain.get(curInd).PID = id;
+                processChain.get(curInd).isAvailble = false;
+                spaceRemaining -= memory;
+                combine();
+                return true;
+            }
+
+            processChain.remove(curInd); // Remove the node
+
+            // Add the new hole
+            if (leftNode > 0) {
+                processChain.add(curInd, new MyProcess(DEFAULT_HOLE_ID, leftNode, true));
+                curInd++;
+            }
+
+            // Add the new process
+            processChain.add(curInd, new MyProcess(id, memory, false));
+            curInd++;
+
+            // Add the new hole
+            if (rightNode > 0) {
+                processChain.add(curInd, new MyProcess(DEFAULT_HOLE_ID, rightNode, true));
+            }
+
+            return true;
+
         } else {
-            if (start == end) {
-                processChain.get(i).memoryUse -= memory;
-                if (processChain.get(i).memoryUse <= 0) {
-                    processChain.remove(i);
-                }
-                spaceRemaining -= memory;
-                processChain.add(i + 1, new MyProcess(1, memory, false));
-            } else if (start == begin) {
-                processChain.get(i).memoryUse -= memory;
-                if (processChain.get(i).memoryUse <= 0) {
-                    processChain.remove(i);
-                }
-                spaceRemaining -= memory;
-                processChain.add(i, new MyProcess(1, memory, false));
-            } else if (start > begin && start < end) {
-                processChain.get(i).memoryUse -= memory;
-                if (processChain.get(i).memoryUse <= 0) {
-                    processChain.remove(i);
-
-                }
-                spaceRemaining -= memory;
-                double startToP = start;
-                double pToEnd = end - (start + memory);
-                processChain.add(i, new MyProcess(id, startToP, true));
-                i++;
-                processChain.get(i).isAvailble = false;
-                processChain.get(i).memoryUse = memory;
-                i++;
-                processChain.add(i, new MyProcess(DEFAULT_HOLE_ID, pToEnd, true));
-            }
-            else{
-                firstFitAdd(id, memory);
-            }
-            combine();
+            return false;
         }
     }
 
-    public void firstFitAdd(int id, double memory) {
+    public boolean firstFitAdd(int id, double memory) {
         MyProcess newP = new MyProcess(id, memory, false);
         boolean hasFound = false;
         int i = 0;
@@ -91,8 +104,7 @@ public class MemoryProcessList {
             if (cur.isAvailble && cur.memoryUse >= memory) {
                 if (cur.memoryUse == memory) {
                     processChain.set(i, newP);
-                }
-                else {
+                } else {
                     cur.memoryUse -= memory;
                     processChain.add(i, newP);
                 }
@@ -104,6 +116,7 @@ public class MemoryProcessList {
         }
 
         combine();
+        return hasFound;
     }
 
     public double getSpaceRemaining() {
@@ -130,8 +143,8 @@ public class MemoryProcessList {
         return processChain.get(index).isAvailble;
     }
 
-    public LinkedList<MyProcess> getProcessChain() { 
-        return processChain; 
+    public LinkedList<MyProcess> getProcessChain() {
+        return processChain;
     }
 
     public void setProcessChain(LinkedList<MyProcess> newChain) {
@@ -175,63 +188,64 @@ public class MemoryProcessList {
         }
     }
 
-    public void swap(int id, double memory){
-        //Find best fitting index
-        LinkedList<Integer> bestFits = new LinkedList<>(); 
-        LinkedList<Integer> largeFits = new LinkedList<>(); 
-        for(int i = 0; i < processChain.size(); i++){
-            MyProcess p = processChain.get(i);
-            LinkedList<Integer> curset = new LinkedList<>();
-            curset.add(i);
-            double total = p.memoryUse;
-            if(total > memory){
-                largeFits = curset;
-            }
-            else if (total == memory){
-                bestFits = curset;
-            }
-
-            if(p.isAvailble){
-                for(int j = i+1; j < processChain.size(); j++){
-                    curset.add(j);
-                    total += processChain.get(j).memoryUse;
-                    if(total > memory){
-                        largeFits.put(total, curset);
-                    }
-                    else if (total == memory){
-                        bestFits.add(curset);
-                    }
-                }
-            }
-            else{
-                int k = i+1;
-                while(k < processChain.size() && !processChain.get(k).isAvailble){
-                    curset.add(k);
-                    k++;
-                }
-
-                for(int j = k; j < processChain.size(); j++){
-                    curset.add(j);
-                    total += processChain.get(j).memoryUse;
-                    if(total > memory){
-                        largeFits.put(total, curset);
-                    }
-                    else if (total == memory){
-                        bestFits.add(curset);
-                    }
+    public boolean swap(int id, double memory) {
+        for (int i = 0; i < processChain.size(); i++) {
+            if (!processChain.get(i).isAvailble) {
+                MemoryProcessList copy = makeCopyOfProcessList();
+                // set it to a hole
+                copy.processChain.get(i).PID = 0;
+                copy.processChain.get(i).isAvailble = true;
+                copy.combine();
+                // Try to add
+                boolean tryAdd = copy.firstFitAdd(id, memory);
+                if (tryAdd) {
+                    this.processChain = copy.processChain;
+                    this.disk.add(processChain.get(i));
+                    return true;
                 }
             }
         }
-
-        if(!bestFits.isEmpty()){
-
-        }
-        else{
-
-        }
+        return false;
     }
 
-    public void compact(){
+    public MemoryProcessList makeCopyOfProcessList() {
+        MemoryProcessList copy = new MemoryProcessList(MAX_SPACE);
 
+        // Remove the default hole created by constructor
+        copy.processChain.clear();
+
+        // Deep copy processChain
+        for (int i = 0; i < this.processChain.size(); i++) {
+            MyProcess p = this.processChain.get(i);
+            copy.processChain.add(new MyProcess(p.PID, p.memoryUse,p.isAvailble));
+        }
+
+        copy.disk.clear();
+        for (int i = 0; i < this.disk.size(); i++) {
+            MyProcess p = this.disk.get(i);
+
+            copy.disk.add(new MyProcess(
+                    p.PID,
+                    p.memoryUse,
+                    p.isAvailble));
+        }
+
+        copy.spaceRemaining = this.spaceRemaining;
+
+        return copy;
     }
+
+    public LinkedList<MyProcess> getDisk() {
+        return disk;
+    }
+
+    public void setDisk(LinkedList<MyProcess> disk) {
+        this.disk = disk;
+    }
+
+    public int getDEFAULT_HOLE_ID() {
+        return DEFAULT_HOLE_ID;
+    }
+
+    
 }
