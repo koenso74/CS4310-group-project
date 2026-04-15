@@ -8,13 +8,9 @@ public class Swapping {
         System.out.println(l);
         l.addProcessAt(3, 200, 300);
         System.out.println(l);
+        l.addProcessAt(4, 200, 300);
+        System.out.println(l);
     }
 
-    public static void swap(){
-
-    }
-
-    public static void compact(){
-
-    }
+    
 }

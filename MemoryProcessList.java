@@ -1,15 +1,19 @@
+import java.util.HashMap;
 import java.util.LinkedList;
 
 public class MemoryProcessList {
     private LinkedList<MyProcess> processChain;
     private double spaceRemaining;
     private final double MAX_SPACE;
+    private LinkedList<MyProcess> disk;
+    private final int DEFAULT_HOLE_ID = 0;
 
     public MemoryProcessList(double max) {
         MAX_SPACE = max;
         spaceRemaining = max;
         processChain = new LinkedList<>();
-        processChain.add(new MyProcess(0, max, true));
+        processChain.add(new MyProcess(DEFAULT_HOLE_ID, max, true));
+        disk = new LinkedList<>();
     }
 
     private void combine() {
@@ -67,7 +71,7 @@ public class MemoryProcessList {
                 processChain.get(i).isAvailble = false;
                 processChain.get(i).memoryUse = memory;
                 i++;
-                processChain.add(i, new MyProcess(id, pToEnd, true));
+                processChain.add(i, new MyProcess(DEFAULT_HOLE_ID, pToEnd, true));
             }
             else{
                 firstFitAdd(id, memory);
@@ -157,5 +161,65 @@ public class MemoryProcessList {
             memoryUse = memory;
             isAvailble = bool;
         }
+    }
+
+    public void swap(int id, double memory){
+        //Find best fitting index
+        LinkedList<Integer> bestFits = new LinkedList<>(); 
+        LinkedList<Integer> largeFits = new LinkedList<>(); 
+        for(int i = 0; i < processChain.size(); i++){
+            MyProcess p = processChain.get(i);
+            LinkedList<Integer> curset = new LinkedList<>();
+            curset.add(i);
+            double total = p.memoryUse;
+            if(total > memory){
+                largeFits = curset;
+            }
+            else if (total == memory){
+                bestFits = curset;
+            }
+
+            if(p.isAvailble){
+                for(int j = i+1; j < processChain.size(); j++){
+                    curset.add(j);
+                    total += processChain.get(j).memoryUse;
+                    if(total > memory){
+                        largeFits.put(total, curset);
+                    }
+                    else if (total == memory){
+                        bestFits.add(curset);
+                    }
+                }
+            }
+            else{
+                int k = i+1;
+                while(k < processChain.size() && !processChain.get(k).isAvailble){
+                    curset.add(k);
+                    k++;
+                }
+
+                for(int j = k; j < processChain.size(); j++){
+                    curset.add(j);
+                    total += processChain.get(j).memoryUse;
+                    if(total > memory){
+                        largeFits.put(total, curset);
+                    }
+                    else if (total == memory){
+                        bestFits.add(curset);
+                    }
+                }
+            }
+        }
+
+        if(!bestFits.isEmpty()){
+
+        }
+        else{
+
+        }
+    }
+
+    public void compact(){
+
     }
 }
