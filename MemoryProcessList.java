@@ -16,6 +16,30 @@ public class MemoryProcessList {
         disk = new LinkedList<>();
     }
 
+    public MyProcess removeProcess(int id){
+        if(id == 0){
+            return null;
+        }
+        boolean hasFound = false;
+        int i = 0;
+        MyProcess p = null;
+        while(!hasFound && i < processChain.size()){
+            if(processChain.get(i).PID == id){
+                p = processChain.get(i);
+                processChain.get(i).PID = 0;
+                processChain.get(i).isAvailble = true;
+                combine();
+                while(!disk.isEmpty()){
+                    MyProcess p1 = disk.remove();
+                    firstFitAdd(p1.PID, p1.memoryUse);
+                }
+                hasFound = true;
+            }
+            i++;
+        }
+        return p;
+    }
+
     private void combine() {
         for (int i = 0; i < processChain.size() - 1; i++) {
             if (processChain.get(i).isAvailble && processChain.get(i + 1).isAvailble) {
@@ -155,6 +179,26 @@ public class MemoryProcessList {
         this.spaceRemaining = space;
     }
 
+    public String getDiskStr(){
+        String list = "[ ";
+        for (int i = 0; i < disk.size() - 1; i++) {
+            if (disk.get(i).isAvailble) {
+                list += "(" + disk.get(i).PID + ":" + disk.get(i).memoryUse + ":Hole) , ";
+            } else {
+                list += "(" + disk.get(i).PID + ":" + disk.get(i).memoryUse + ":Occupied) , ";
+
+            }
+        }
+        if (disk.get(disk.size() - 1).isAvailble) {
+            list += "(" + disk.get(disk.size() - 1).PID + ":"
+                    + disk.get(disk.size() - 1).memoryUse + ":Hole) ]";
+        } else {
+            list += "(" + disk.get(disk.size() - 1).PID + ":"
+                    + disk.get(disk.size() - 1).memoryUse + ":Occupied) ]";
+        }
+        return list;
+    }
+
     @Override
     public String toString() {
         String list = "[ ";
@@ -191,6 +235,7 @@ public class MemoryProcessList {
     public boolean swap(int id, double memory) {
         for (int i = 0; i < processChain.size(); i++) {
             if (!processChain.get(i).isAvailble) {
+                MyProcess p = processChain.get(i);
                 MemoryProcessList copy = makeCopyOfProcessList();
                 // set it to a hole
                 copy.processChain.get(i).PID = 0;
@@ -200,7 +245,7 @@ public class MemoryProcessList {
                 boolean tryAdd = copy.firstFitAdd(id, memory);
                 if (tryAdd) {
                     this.processChain = copy.processChain;
-                    this.disk.add(processChain.get(i));
+                    this.disk.add(p);
                     return true;
                 }
             }

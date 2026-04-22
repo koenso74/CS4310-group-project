@@ -8,7 +8,8 @@ public class Swapping {
         System.out.println(l);
         System.out.println(l.swap(3, 800));
         System.out.println(l);
-
+        l.removeProcess(2);
+        System.out.println(l);
     }
 
     
