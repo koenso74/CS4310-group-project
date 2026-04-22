@@ -70,8 +70,8 @@ public class MemoryCompaction {
         // Build new process chain
         LinkedList<MemoryProcessList.MyProcess> newChain = new LinkedList<>();
         
-        double totalFreeSpace = 0;
         // Add processes and free space before the split point
+        double totalFreeSpace = 0;
         for (int i = 0; i < splitIndex; i++) {
             MemoryProcessList.MyProcess block = currentChain.get(i);
             newChain.add(block);
@@ -96,6 +96,133 @@ public class MemoryCompaction {
         memoryList.setSpaceRemaining(totalFreeSpace);
     }
 
+    public static void compactHeuristically(MemoryProcessList memoryList, double processSize) {
+        // Get current process chain
+        LinkedList<MemoryProcessList.MyProcess> currentChain = memoryList.getProcessChain();
+    
+        // Variables to track best results from moving processes
+        int left = -1;
+        int numProcesses = Integer.MAX_VALUE;
+        double totalProcessSize = Double.MAX_VALUE;
+        LinkedList<Integer> processesToMove = null;
+        int bestDestIndex = -1;
+        
+        // Loop to determine what process to move to gain the largest amount of memory
+        for (int i = 0; i < currentChain.size(); i++) {
+            if (currentChain.get(i).isAvailble) {
+                double runningTotal = currentChain.get(i).memoryUse;
+                int processCount = 0;
+                double sizeOfProcess = 0;
+                
+                for (int j = i + 1; j < currentChain.size(); j++) {
+                    if (currentChain.get(j).isAvailble) {
+                        runningTotal += currentChain.get(j).memoryUse;
+                        
+                        // If process fits within the total space of the free + processes + free blocks
+                        if (runningTotal >= processSize) {
+
+                            // Check if there is a valid destination for these processes
+                            int tempDestIndex = -1;
+                            for (int k = 0; k < currentChain.size(); k++) {
+                                if (currentChain.get(k).isAvailble) {
+                                    // Prevents use of currently used free blocks
+                                    if (k >= i && k <= j) {
+                                        continue;
+                                    }
+
+                                    // Check if free block can fit the processes
+                                    if (currentChain.get(k).memoryUse >= sizeOfProcess) {
+                                        tempDestIndex = k;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // If a valid destination exists
+                            if (tempDestIndex != -1) {
+                                // Compare with current best
+                                if (processCount < numProcesses || (processCount == numProcesses && sizeOfProcess < totalProcessSize)) {
+                                    
+                                    // Update values
+                                    left = i;
+                                    numProcesses = processCount;
+                                    totalProcessSize = sizeOfProcess;
+                                    bestDestIndex = tempDestIndex;
+                                    
+                                    // Record which processes to move
+                                    processesToMove = new LinkedList<>();
+                                    for (int k = i + 1; k < j; k++) {
+                                        if (!currentChain.get(k).isAvailble) {
+                                            processesToMove.add(k);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    } else {
+                        // Add process values to current values
+                        runningTotal += currentChain.get(j).memoryUse;
+                        processCount++;
+                        sizeOfProcess += currentChain.get(j).memoryUse;
+                    }
+                }
+            }
+        }
+
+        if (left == -1) {
+            System.out.println("No best fitting locations");
+            return;
+        }
+        
+        // Look for a free block that can fit the moved processes
+        int destIndex = bestDestIndex;
+        LinkedList<MemoryProcessList.MyProcess> processedMoved = new LinkedList<>();
+        for (int idx : processesToMove) {
+            processedMoved.add(currentChain.get(idx));
+        }
+        
+        // Remove processes from their original positions
+        for (int i = processesToMove.size() - 1; i >= 0; i--) {
+            currentChain.remove((int)processesToMove.get(i));
+        }
+        
+        // Adjust destIndex if it changed due to removals
+        int adjustedDestIndex = destIndex;
+        if (destIndex > processesToMove.get(0)) {
+            // If destination was after removed processes, adjust index
+            for (int idx : processesToMove) {
+                if (destIndex > idx) {
+                    adjustedDestIndex--;
+                }
+            }
+        }
+    
+        // Insert moved processes at destination
+        int insertIndex = adjustedDestIndex + 1;
+        currentChain.addAll(insertIndex, processedMoved);
+
+        // Handle the free block at destination
+        double remainingFree = currentChain.get(adjustedDestIndex).memoryUse - totalProcessSize;
+        if (remainingFree > 0) {
+            currentChain.get(adjustedDestIndex).memoryUse = remainingFree;
+        } else {
+            currentChain.remove(adjustedDestIndex);
+        }
+        
+        // Update memory
+        memoryList.setProcessChain(currentChain);
+        
+        // Recalculate total free space
+        double totalFree = 0;
+        for (MemoryProcessList.MyProcess p : currentChain) {
+            if (p.isAvailble) {
+                totalFree += p.memoryUse;
+            }
+        }
+        memoryList.setSpaceRemaining(totalFree);
+    }
+
     public static void main(String[] args) {
         MemoryProcessList memory = new MemoryProcessList(1000);
         memory.addProcessAt(1, 200, 0);
@@ -109,7 +236,7 @@ public class MemoryCompaction {
         System.out.println("Which memory compaction algorithm to use?: ");
         System.out.println("(1) Compact to end");
         System.out.println("(2) Compact until a large enough hole");
-        System.out.println("(3) Compact");
+        System.out.println("(3) Compact using heuristics");
         int choice = scanner.nextInt();
         
         switch(choice) {
@@ -117,17 +244,55 @@ public class MemoryCompaction {
                 compactToEnd(memory);
                 break;
             case 2:
-                compactUntilLargeHole(memory, 400);
+                compactUntilLargeHole(memory, 200);
                 break;
             case 3:
-                System.out.println("You selected option 3");
+                compactHeuristically(memory, 200);
                 break;
             default:
                 System.out.println("Invalid choice! Please enter 1, 2, or 3");
         }
 
-        memory.firstFitAdd(4, 400);
+        addProcessRightAligned(memory, 4, 200);
         displayMemoryLayout(memory);
+
+        scanner.close();
+    }
+
+    public static void addProcessRightAligned(MemoryProcessList memoryList, int processId, double processSize) {
+        // Get process chain after compaction
+        LinkedList<MemoryProcessList.MyProcess> currentChain = memoryList.getProcessChain();
+        
+        // Find location of free space to place memory
+        int freeIndex = -1;
+        double freeSize = 0;
+        for (int i = 0; i < currentChain.size(); i++) {
+            MemoryProcessList.MyProcess block = currentChain.get(i);
+            if (block.isAvailble && block.memoryUse >= processSize) {
+                freeIndex = i;
+                freeSize = block.memoryUse;
+                break;
+            }
+        }
+        
+        double remainingFree = freeSize - processSize;
+        
+        // Align new process to right side of free space
+        if (remainingFree > 0) {
+            currentChain.get(freeIndex).memoryUse = remainingFree;
+            currentChain.add(freeIndex + 1, memoryList.new MyProcess(processId, processSize, false));
+        } else {
+            currentChain.set(freeIndex, memoryList.new MyProcess(processId, processSize, false));
+        }
+        
+        // Calculate total remaining free space
+        double totalFree = 0;
+        for (MemoryProcessList.MyProcess p : currentChain) {
+            if (p.isAvailble) {
+                totalFree += p.memoryUse;
+            }
+        }
+        memoryList.setSpaceRemaining(totalFree);
     }
 
     public static void displayMemoryLayout(MemoryProcessList memory) {
