@@ -1,3 +1,5 @@
+package com.mygroup;
+
 import java.util.LinkedList;
 import java.util.Random;
 
