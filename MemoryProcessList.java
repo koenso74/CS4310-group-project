@@ -1,14 +1,16 @@
-import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Random;
 
 public class MemoryProcessList {
     private LinkedList<MyProcess> processChain;
-    private double spaceRemaining;
-    private final double MAX_SPACE;
+    private int spaceRemaining;
+    private final int MAX_SPACE;
     private LinkedList<MyProcess> disk;
     private final int DEFAULT_HOLE_ID = 0;
+    private final int MIN_RAND_PROCESS_SIZE = 100;
+    private final int MAX_RAND_PROCESS_SIZE = 1000;
 
-    public MemoryProcessList(double max) {
+    public MemoryProcessList(int max) {
         MAX_SPACE = max;
         spaceRemaining = max;
         processChain = new LinkedList<>();
@@ -49,13 +51,13 @@ public class MemoryProcessList {
         }
     }
 
-    public boolean addProcessAt(int id, double memory, double start) {
+    public boolean addProcessAt(int id, int memory, int start) {
         if (memory <= spaceRemaining) {
             // find the index of starting
             boolean hasFound = false;
             int curInd = 0;
-            double begin = 0;
-            double end = 0;
+            int begin = 0;
+            int end = 0;
             while (curInd < processChain.size() && !hasFound) {
                 end = begin + processChain.get(curInd).memoryUse;
                 if (start >= begin && start < end) {
@@ -81,8 +83,8 @@ public class MemoryProcessList {
                 return false;
             }
 
-            double leftNode = start - begin;
-            double rightNode = end - (start + memory);
+            int leftNode = start - begin;
+            int rightNode = end - (start + memory);
 
             // Check if it is a perfect fit
             if (leftNode == 0 && rightNode == 0) {
@@ -117,7 +119,7 @@ public class MemoryProcessList {
         }
     }
 
-    public boolean firstFitAdd(int id, double memory) {
+    public boolean firstFitAdd(int id, int memory) {
         MyProcess newP = new MyProcess(id, memory, false);
         boolean hasFound = false;
         int i = 0;
@@ -143,11 +145,11 @@ public class MemoryProcessList {
         return hasFound;
     }
 
-    public double getSpaceRemaining() {
+    public int getSpaceRemaining() {
         return spaceRemaining;
     }
 
-    public double getMAX_SPACE() {
+    public int getMAX_SPACE() {
         return MAX_SPACE;
     }
 
@@ -159,7 +161,7 @@ public class MemoryProcessList {
         return processChain.get(index).PID;
     }
 
-    public double getProcessMemoryUse(int index) {
+    public int getProcessMemoryUse(int index) {
         return processChain.get(index).memoryUse;
     }
 
@@ -175,7 +177,7 @@ public class MemoryProcessList {
         this.processChain = newChain;
     }
 
-    public void setSpaceRemaining(double space) {
+    public void setSpaceRemaining(int space) {
         this.spaceRemaining = space;
     }
 
@@ -222,17 +224,17 @@ public class MemoryProcessList {
 
     class MyProcess {
         int PID;
-        double memoryUse;
+        int memoryUse;
         boolean isAvailble;
 
-        MyProcess(int id, double memory, boolean bool) {
+        MyProcess(int id, int memory, boolean bool) {
             PID = id;
             memoryUse = memory;
             isAvailble = bool;
         }
     }
 
-    public boolean swap(int id, double memory) {
+    public boolean swap(int id, int memory) {
         for (int i = 0; i < processChain.size(); i++) {
             if (!processChain.get(i).isAvailble) {
                 MyProcess p = processChain.get(i);
@@ -292,5 +294,51 @@ public class MemoryProcessList {
         return DEFAULT_HOLE_ID;
     }
 
-    
+    // Fronted Stuff
+    public LinkedList<LinkedList<Integer>> getDataForFrontend() {
+        LinkedList<LinkedList<Integer>> data = new LinkedList<>();
+        
+        int start = 0;
+        for (int i = 0; i < processChain.size(); i++) {
+            var process = processChain.get(i);
+            if (!process.isAvailble) {
+                LinkedList<Integer> processData = new LinkedList<>();
+                processData.add(process.PID);
+                processData.add(start);
+                processData.add((int)process.memoryUse);
+                data.add(processData);
+            }
+            start += process.memoryUse;
+        }
+
+        return data;
+    }
+
+    public void Randomize() {
+        Clear();
+
+        int i = 0;
+        Random rand = new Random();
+        int r = rand.nextInt(0, 2);
+
+        while (spaceRemaining > 0) {
+            int size = rand.nextInt(Math.min(MIN_RAND_PROCESS_SIZE, spaceRemaining), Math.min(MAX_RAND_PROCESS_SIZE, spaceRemaining) + 1);
+
+            boolean b = i % 2 == r;
+            if (!b && size < MIN_RAND_PROCESS_SIZE)
+                b = true;
+            var process = new MyProcess(i, size, b);
+
+            processChain.add(process);
+            
+            i++;
+            spaceRemaining -= size;
+        }
+    }
+
+    public void Clear() {
+        processChain.clear();
+        disk.clear();
+        spaceRemaining = MAX_SPACE;
+    }
 }
