@@ -28,17 +28,17 @@ public class App {
         });
 
         app.post("/api/compact_to_end", ctx -> {
-            
+            l.compactToEnd();
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_until_large_hole", ctx -> {
-            
+            l.compactUntilLargeHole(300);
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_heuristically", ctx -> {
-            
+            l.compactHeuristically(300);
             ctx.json(l.getDataForFrontend());
         });
     }

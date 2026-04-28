@@ -304,7 +304,7 @@ public class MemoryCompaction {
         System.out.println("   -----------------|---------|-------");
         
         for (MemoryProcessList.MyProcess p : memory.getProcessChain()) {
-             String type = p.isAvailble ? "FREE     " : "PROCESS " + p.PID;
+            String type = p.isAvailble ? "FREE     " : "PROCESS " + p.PID;
             System.out.printf("   [%5.0f - %5.0f] | %s | %5.0f\n", currentAddress, currentAddress + p.memoryUse, type, p.memoryUse);
             currentAddress += p.memoryUse;
         }
