@@ -4,9 +4,16 @@ function App() {
   const TOTAL_MEM = 2000;
   const UI_WIDTH = 800;
   const [processList, setProcessList] = useState<number[][]>([]);
+
   const [pid, setPID] = useState(0);
   const [start, setStart] = useState(0);
   const [memory, setMemory] = useState(0);
+
+  const [pid_swap, setPIDSwap] = useState(0);
+  const [memory_swap, setMemorySwap] = useState(0);
+
+  const [memory2, setMemory2] = useState(100);
+  const [memory3, setMemory3] = useState(100);
 
   // Showing the empty process list at first
   useEffect(() => {
@@ -30,7 +37,7 @@ function App() {
   const handleAddProcess = () => {
     if (memory <= 0) {
       alert("Memory size must be greater than 0!");
-      return; // Exit the function early
+      return;
     }
 
     const payload = {
@@ -49,13 +56,10 @@ function App() {
         return res.json();
       })
       .then((data) => {
-        // 1. Log the full list to verify
         console.log("New Process List:", data);
 
-        // 2. CRITICAL: Update the state so the bar re-renders
         setProcessList(data);
 
-        // 3. Reset inputs to 0 (optional but clean)
         setPID(0);
         setStart(0);
         setMemory(0);
@@ -64,12 +68,35 @@ function App() {
   };
   // Swap a process with a new one
   const handleSwap = () => {
+    if (memory_swap <= 0) {
+      alert("Memory size must be greater than 0!");
+      return;
+    }
+
+    const payload = {
+      pid: Number(pid_swap),
+      start: Number(0),
+      memory: Number(memory_swap),
+    };
+
     fetch("http://localhost:7070/api/swap", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
-      .then((res) => res.json())
-      .then((data) => setProcessList(data))
-      .catch((err) => console.error("Error swapping:", err));
+      .then((res) => {
+        if (!res.ok) throw new Error("Server error");
+        return res.json();
+      })
+      .then((data) => {
+        console.log("New Process List:", data);
+
+        setProcessList(data);
+
+        setPIDSwap(0);
+        setMemorySwap(0);
+      })
+      .catch((err) => console.error("Error Swapping:", err));
   };
 
   // Compacts
@@ -85,6 +112,8 @@ function App() {
   const handleCompactUntilLargeHole = () => {
     fetch("http://localhost:7070/api/compact_until_large_hole", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memory: memory2 }),
     })
       .then((res) => res.json())
       .then((data) => setProcessList(data))
@@ -94,6 +123,8 @@ function App() {
   const handleCompactHeuristically = () => {
     fetch("http://localhost:7070/api/compact_heuristically", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memory: memory3 }),
     })
       .then((res) => res.json())
       .then((data) => setProcessList(data))
@@ -262,33 +293,133 @@ function App() {
         </div>
       </div>
       <h1>Defragmentation Algorithms</h1>
-      <button
-        onClick={handleSwap}
-        style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
-      >
-        Swap a process for a new process (PID: 123)
-      </button>
       <div></div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+            Process ID:
+          </label>
+          <input
+            type="number"
+            placeholder="e.g. 1"
+            value={pid_swap}
+            onChange={(e) => setPIDSwap(parseInt(e.target.value, 10) || 0)}
+            style={{
+              padding: "5px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+            Memory Size:
+          </label>
+          <input
+            type="number"
+            placeholder="e.g. 0"
+            value={memory_swap}
+            onChange={(e) => setMemorySwap(parseInt(e.target.value, 10) || 0)}
+            style={{
+              padding: "5px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+        <button
+          onClick={handleSwap}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
+          Swap a process for a new process
+        </button>
+      </div>
       <button
         onClick={handleCompactToEnd}
         style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
       >
         Compact To End
       </button>
-      <div></div>
-      <button
-        onClick={handleCompactUntilLargeHole}
-        style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "20px",
+        }}
       >
-        Compact Until Large Hole
-      </button>
-      <div></div>
-      <button
-        onClick={handleCompactHeuristically}
-        style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+          Memory Size:
+        </label>
+        <input
+          type="number"
+          placeholder="e.g. 500"
+          value={memory2}
+          onChange={(e) => setMemory2(parseInt(e.target.value, 10) || 0)}
+          style={{
+            padding: "5px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+        <button
+          onClick={handleCompactUntilLargeHole}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
+          Compact Until Large Hole
+        </button>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "20px",
+        }}
       >
-        Compact Heuristically
-      </button>
+        <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+          Memory Size:
+        </label>
+        <input
+          type="number"
+          placeholder="e.g. 500"
+          value={memory3}
+          onChange={(e) => setMemory3(parseInt(e.target.value, 10) || 0)}
+          style={{
+            padding: "5px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+        <button
+          onClick={handleCompactHeuristically}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
+          Compact Heuristically
+        </button>
+      </div>
     </div>
   );
 }

@@ -17,6 +17,9 @@ public class App {
             this.memory = memory;
         }
     }
+    static class MemoryRequest {
+        public int memory;
+    }
 
     public static void main(String[] args) {
         var app = Javalin.create(config -> {
@@ -42,7 +45,8 @@ public class App {
         });
 
         app.post("/api/swap", ctx -> {
-            l.swap(123, 300);
+            ProcessData data = ctx.bodyAsClass(ProcessData.class);
+            l.swap(data.pid, data.memory);
             ctx.json(l.getDataForFrontend());
         });
 
@@ -52,12 +56,12 @@ public class App {
         });
 
         app.post("/api/compact_until_large_hole", ctx -> {
-            l.compactUntilLargeHole(300);
+            l.compactUntilLargeHole(ctx.bodyAsClass(MemoryRequest.class).memory);
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_heuristically", ctx -> {
-            l.compactHeuristically(300);
+            l.compactHeuristically(ctx.bodyAsClass(MemoryRequest.class).memory);
             ctx.json(l.getDataForFrontend());
         });
     }

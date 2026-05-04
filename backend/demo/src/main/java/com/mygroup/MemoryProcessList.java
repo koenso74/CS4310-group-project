@@ -298,7 +298,7 @@ public class MemoryProcessList {
     public void compactUntilLargeHole(int processSize) {
         // Exit if there isn't enough space for the process
         if (spaceRemaining < processSize) {
-            System.out.println("Not enough total free space");
+            System.out.println("Not enough total free space, processSize: " + processSize);
             return;
         }
         
@@ -567,6 +567,7 @@ public class MemoryProcessList {
         int i = 0;
         Random rand = new Random();
         int r = rand.nextInt(0, 2);
+        int spaceHole = 0;
 
         while (spaceRemaining > 0) {
             int size = rand.nextInt(Math.min(MIN_RAND_PROCESS_SIZE, spaceRemaining), Math.min(MAX_RAND_PROCESS_SIZE, spaceRemaining) + 1);
@@ -577,10 +578,15 @@ public class MemoryProcessList {
             var process = new MyProcess(i, size, b);
 
             processChain.add(process);
+
+            if (b)
+                spaceHole += size;
             
             i++;
             spaceRemaining -= size;
         }
+
+        spaceRemaining = spaceHole;
     }
 
     public void Clear() {
