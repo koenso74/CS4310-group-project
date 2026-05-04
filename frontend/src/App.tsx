@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 
 function App() {
-  const [processList, setProcessList] = useState<number[][]>([]);
   const TOTAL_MEM = 2000;
   const UI_WIDTH = 800;
-
+  const [processList, setProcessList] = useState<number[][]>([]);
+  const [pid, setPID] = useState(0);
+  const [start, setStart] = useState(0);
+  const [memory, setMemory] = useState(0);
 
   // Showing the empty process list at first
   useEffect(() => {
@@ -24,6 +26,42 @@ function App() {
       .catch((err) => console.error("Error randomizing:", err));
   };
 
+  // Add a process
+  const handleAddProcess = () => {
+    if (memory <= 0) {
+      alert("Memory size must be greater than 0!");
+      return; // Exit the function early
+    }
+
+    const payload = {
+      pid: Number(pid),
+      start: Number(start),
+      memory: Number(memory),
+    };
+
+    fetch("http://localhost:7070/api/add_process", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Server error");
+        return res.json();
+      })
+      .then((data) => {
+        // 1. Log the full list to verify
+        console.log("New Process List:", data);
+
+        // 2. CRITICAL: Update the state so the bar re-renders
+        setProcessList(data);
+
+        // 3. Reset inputs to 0 (optional but clean)
+        setPID(0);
+        setStart(0);
+        setMemory(0);
+      })
+      .catch((err) => console.error("Error Add Process:", err));
+  };
   // Swap a process with a new one
   const handleSwap = () => {
     fetch("http://localhost:7070/api/swap", {
@@ -70,6 +108,89 @@ function App() {
       >
         Randomize Process List
       </button>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+            Process ID:
+          </label>
+          <input
+            type="number"
+            placeholder="e.g. 1"
+            value={pid}
+            onChange={(e) => setPID(parseInt(e.target.value, 10) || 0)}
+            style={{
+              padding: "5px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+            Start Address:
+          </label>
+          <input
+            type="number"
+            placeholder="e.g. 0"
+            value={start}
+            onChange={(e) => setStart(parseInt(e.target.value, 10) || 0)}
+            style={{
+              padding: "5px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+            Memory Size:
+          </label>
+          <input
+            type="number"
+            placeholder="e.g. 500"
+            value={memory}
+            onChange={(e) => setMemory(parseInt(e.target.value, 10) || 0)}
+            style={{
+              padding: "5px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+        <button
+          onClick={handleAddProcess}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
+          Add a Process
+        </button>
+      </div>
       <div
         style={{
           display: "flex",
