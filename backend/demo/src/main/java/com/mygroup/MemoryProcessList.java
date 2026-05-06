@@ -565,6 +565,7 @@ public class MemoryProcessList {
         Clear();
 
         int i = 0;
+        int pid_increment = 1;
         Random rand = new Random();
         int r = rand.nextInt(0, 2);
         int spaceHole = 0;
@@ -575,7 +576,13 @@ public class MemoryProcessList {
             boolean b = i % 2 == r;
             if (!b && size < MIN_RAND_PROCESS_SIZE)
                 b = true;
-            var process = new MyProcess(i, size, b);
+
+            int pid = 0;
+            if (!b) {
+                pid = pid_increment;
+                pid_increment++;
+            }
+            var process = new MyProcess(pid, size, b);
 
             processChain.add(process);
 
