@@ -10,15 +10,25 @@ public class BatchTest {
         test.RunTest();
     }
 
-    public void RunTest() {
+    public static class BatchTestResults {
+        public int[] successCounts;
+        public float[] avgMovedProcessNums;
+
+        public BatchTestResults(int[] successCounts, float[] avgMovedProcessNums) {
+            this.successCounts = successCounts;
+            this.avgMovedProcessNums = avgMovedProcessNums;
+        }
+    }
+
+    public BatchTestResults RunTest() {
         int[] successCounts = new int[4];
         float[] avgMovedProcessNums = new float[4];
         Random rand = new Random();
-        
+
         MemoryProcessList l = new MemoryProcessList(2000);
         for (int i = 0; i < TEST_SIZE; i++) {
             l.Randomize();
-            
+
             var temp = l.makeCopyOfProcessList();
 
             int memorySize = rand.nextInt(500, 1000);
@@ -37,24 +47,25 @@ public class BatchTest {
             }
             l.setProcessChain(temp.getProcessChain());
 
-            var r3 = l.compactUntilLargeHole( memorySize);
+            var r3 = l.compactUntilLargeHole(memorySize);
             if (r3.success) {
                 successCounts[2]++;
                 avgMovedProcessNums[2] += r3.movedProcessNum;
             }
             l.setProcessChain(temp.getProcessChain());
 
-            var r4 = l.compactHeuristically(memorySize);
-            if (r4.success) {
-                successCounts[3]++;
-                avgMovedProcessNums[3] += r4.movedProcessNum;
-            }
+            // var r4 = l.compactHeuristically(memorySize);
+            // if (r4.success) {
+            //     successCounts[3]++;
+            //     avgMovedProcessNums[3] += r4.movedProcessNum;
+            // }
         }
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             avgMovedProcessNums[i] /= successCounts[i];
             System.out.println(successCounts[i] + ", " + avgMovedProcessNums[i]);
         }
 
+        return new BatchTestResults(successCounts, avgMovedProcessNums);
     }
 }

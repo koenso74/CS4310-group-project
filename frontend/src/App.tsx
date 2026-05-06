@@ -1,5 +1,32 @@
 import React, { useState, useEffect, memo } from "react";
 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+import ChartDataLabels from "chartjs-plugin-datalabels";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels,
+);
+
+interface BatchTestResults {
+  successCounts: number[];
+  avgMovedProcessNums: number[];
+}
+
 function App() {
   const TOTAL_MEM = 2000;
   const UI_WIDTH = 800;
@@ -15,6 +42,62 @@ function App() {
   const [memory1, setMemory1] = useState(100);
   const [memory2, setMemory2] = useState(100);
   const [memory3, setMemory3] = useState(100);
+
+  const [batchResults, setBatchResults] = useState<BatchTestResults | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
+
+  const labels = ["Swap", "To End", "Large Hole", "Heuristic"];
+
+  const successData = {
+    labels,
+    datasets: [
+      {
+        label: "Success Counts (out of 100)",
+        data: batchResults?.successCounts || [],
+        backgroundColor: "rgba(54, 162, 235, 0.6)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const movedData = {
+    labels,
+    datasets: [
+      {
+        label: "Avg Processes Moved",
+        data: batchResults?.avgMovedProcessNums || [],
+        backgroundColor: "rgba(255, 99, 132, 0.6)",
+        borderColor: "rgba(255, 99, 132, 1)",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: true },
+      datalabels: {
+        display: true,
+        color: "#000",
+        align: "top" as const,
+        anchor: "end" as const,
+        offset: 4,
+        font: { weight: "bold" as const },
+        formatter: (value: number) =>
+          value % 1 === 0 ? value : value.toFixed(2),
+      },
+    },
+    layout: {
+      padding: { top: 20 },
+    },
+    scales: {
+      y: { beginAtZero: true },
+    },
+  };
 
   // Showing the empty process list at first
   useEffect(() => {
@@ -90,7 +173,10 @@ function App() {
       body: JSON.stringify(payload),
     })
       .then((res) => {
-        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        if (!res.ok)
+          return res.text().then((text) => {
+            throw new Error(text);
+          });
         return res.json();
       })
       .then((data) => {
@@ -112,7 +198,10 @@ function App() {
       body: JSON.stringify({ memory: memory1 }),
     })
       .then((res) => {
-        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        if (!res.ok)
+          return res.text().then((text) => {
+            throw new Error(text);
+          });
         return res.json();
       })
       .then((data) => setProcessList(data))
@@ -126,7 +215,10 @@ function App() {
       body: JSON.stringify({ memory: memory2 }),
     })
       .then((res) => {
-        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        if (!res.ok)
+          return res.text().then((text) => {
+            throw new Error(text);
+          });
         return res.json();
       })
       .then((data) => setProcessList(data))
@@ -140,11 +232,33 @@ function App() {
       body: JSON.stringify({ memory: memory3 }),
     })
       .then((res) => {
-        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        if (!res.ok)
+          return res.text().then((text) => {
+            throw new Error(text);
+          });
         return res.json();
       })
       .then((data) => setProcessList(data))
       .catch((err) => alert("Backend Error: " + err.message));
+  };
+
+  const runBatchTest = () => {
+    setLoading(true);
+    fetch("http://localhost:7070/api/batch_test", {
+      method: "POST",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Batch test failed on server");
+        return res.json();
+      })
+      .then((data) => {
+        setBatchResults(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setLoading(false);
+      });
   };
 
   return (
@@ -459,6 +573,42 @@ function App() {
         >
           Compact Heuristically
         </button>
+      </div>
+      <div
+        style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc" }}
+      >
+        <button
+          onClick={runBatchTest}
+          disabled={loading}
+          style={{
+            backgroundColor: loading ? "#ccc" : "#4CAF50",
+            color: "white",
+            padding: "10px 20px",
+          }}
+        >
+          {loading ? "Running 100 Tests..." : "Run Batch Comparison Test"}
+        </button>
+
+        {batchResults && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "20px",
+              marginTop: "20px",
+            }}
+          >
+            {/* Graph 1: Success Rate */}
+            <div style={{ width: "45%", minWidth: "300px" }}>
+              <Bar data={successData} options={chartOptions} />
+            </div>
+
+            {/* Graph 2: Efficiency */}
+            <div style={{ width: "45%", minWidth: "300px" }}>
+              <Bar data={movedData} options={chartOptions} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

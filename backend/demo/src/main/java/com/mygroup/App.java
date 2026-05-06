@@ -91,5 +91,11 @@ public class App {
 
             ctx.json(l.getDataForFrontend());
         });
+
+        var batchTest = new BatchTest();
+        app.post("/api/batch_test", ctx -> {
+            var result = batchTest.RunTest();
+            ctx.json(result);
+        });
     }
 }
