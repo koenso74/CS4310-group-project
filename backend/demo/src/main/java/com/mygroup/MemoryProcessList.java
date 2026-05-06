@@ -340,8 +340,6 @@ public class MemoryProcessList {
             if (block.isAvailble) {
                 totalFreeSpace += block.memoryUse;
             }
-            else
-                movedProcessNum++;
         }
         totalFreeSpace += accumulatedFree;
         
@@ -485,7 +483,7 @@ public class MemoryProcessList {
         }
         setSpaceRemaining(totalFree);
 
-        return new DefragmentationResult(true, processedMoved.size());
+        return new DefragmentationResult(true, processesToMove.size());
     }
 
     public void addProcessRightAligned(int processId, int processSize) {
