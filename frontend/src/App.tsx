@@ -12,6 +12,7 @@ function App() {
   const [pid_swap, setPIDSwap] = useState(0);
   const [memory_swap, setMemorySwap] = useState(0);
 
+  const [memory1, setMemory1] = useState(100);
   const [memory2, setMemory2] = useState(100);
   const [memory3, setMemory3] = useState(100);
 
@@ -68,6 +69,10 @@ function App() {
   };
   // Swap a process with a new one
   const handleSwap = () => {
+    if (pid_swap == 0) {
+      alert("PID must be greater than 0!");
+      return;
+    }
     if (memory_swap <= 0) {
       alert("Memory size must be greater than 0!");
       return;
@@ -85,7 +90,7 @@ function App() {
       body: JSON.stringify(payload),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Server error");
+        if (!res.ok) return res.text().then(text => { throw new Error(text) });
         return res.json();
       })
       .then((data) => {
@@ -96,17 +101,22 @@ function App() {
         setPIDSwap(0);
         setMemorySwap(0);
       })
-      .catch((err) => console.error("Error Swapping:", err));
+      .catch((err) => alert("Backend Error: " + err.message));
   };
 
   // Compacts
   const handleCompactToEnd = () => {
     fetch("http://localhost:7070/api/compact_to_end", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memory: memory1 }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        return res.json();
+      })
       .then((data) => setProcessList(data))
-      .catch((err) => console.error("Error swapping:", err));
+      .catch((err) => alert("Backend Error: " + err.message));
   };
 
   const handleCompactUntilLargeHole = () => {
@@ -115,9 +125,12 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memory: memory2 }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        return res.json();
+      })
       .then((data) => setProcessList(data))
-      .catch((err) => console.error("Error swapping:", err));
+      .catch((err) => alert("Backend Error: " + err.message));
   };
 
   const handleCompactHeuristically = () => {
@@ -126,9 +139,12 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ memory: memory3 }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return res.text().then(text => { throw new Error(text) });
+        return res.json();
+      })
       .then((data) => setProcessList(data))
-      .catch((err) => console.error("Error swapping:", err));
+      .catch((err) => alert("Backend Error: " + err.message));
   };
 
   return (
@@ -354,12 +370,36 @@ function App() {
           Swap a process for a new process
         </button>
       </div>
-      <button
-        onClick={handleCompactToEnd}
-        style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "20px",
+        }}
       >
-        Compact To End
-      </button>
+        <label style={{ fontSize: "12px", fontWeight: "bold" }}>
+          Memory Size:
+        </label>
+        <input
+          type="number"
+          placeholder="e.g. 500"
+          value={memory1}
+          onChange={(e) => setMemory1(parseInt(e.target.value, 10) || 0)}
+          style={{
+            padding: "5px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+        <button
+          onClick={handleCompactToEnd}
+          style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}
+        >
+          Compact To End
+        </button>
+      </div>
       <div
         style={{
           display: "flex",

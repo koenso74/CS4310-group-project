@@ -236,7 +236,10 @@ public class MemoryProcessList {
         }
     }
 
-    public boolean swap(int id, int memory) {
+    public DefragmentationResult swap(int id, int memory) {
+        boolean success = false;
+        int movedProcessNum = 0;
+
         for (int i = 0; i < processChain.size(); i++) {
             if (!processChain.get(i).isAvailble) {
                 MyProcess p = processChain.get(i);
@@ -250,15 +253,20 @@ public class MemoryProcessList {
                 if (tryAdd) {
                     this.processChain = copy.processChain;
                     this.disk.add(p);
-                    return true;
+
+                    success = true;
+                    movedProcessNum = 1;
+                    break;
                 }
             }
         }
-        return false;
+
+        return new DefragmentationResult(success, movedProcessNum);
     }
 
-    public void compactToEnd() {
-        
+    public DefragmentationResult compactToEnd(int processSize) {
+        int movedProcessNum = 0;
+
         // Collect allocated processes in the chain
         LinkedList<MemoryProcessList.MyProcess> allocated = new LinkedList<>();
         for (MemoryProcessList.MyProcess p : processChain) {
@@ -275,6 +283,8 @@ public class MemoryProcessList {
         
         // Calculate available space
         int emptySpaceAtStart = MAX_SPACE - totalUsed;
+        if (emptySpaceAtStart < processSize)
+            return new DefragmentationResult(false, 0);
         
         // Build new process chain
         LinkedList<MemoryProcessList.MyProcess> newChain = new LinkedList<>();
@@ -288,19 +298,22 @@ public class MemoryProcessList {
         // Add processes to the end
         for (MemoryProcessList.MyProcess p : allocated) {
             newChain.add(p);
+            movedProcessNum++;
         }
         
         // Update memory list
         setProcessChain(newChain);
         setSpaceRemaining(emptySpaceAtStart);
+
+        return new DefragmentationResult(true, movedProcessNum);
     }
 
-    public void compactUntilLargeHole(int processSize) {
+    public DefragmentationResult compactUntilLargeHole(int processSize) {
+        int movedProcessNum = 0;
+
         // Exit if there isn't enough space for the process
-        if (spaceRemaining < processSize) {
-            System.out.println("Not enough total free space, processSize: " + processSize);
-            return;
-        }
+        if (spaceRemaining < processSize)
+            return new DefragmentationResult(false, 0);
         
         int accumulatedFree = 0;
         int splitIndex = processChain.size();
@@ -327,6 +340,8 @@ public class MemoryProcessList {
             if (block.isAvailble) {
                 totalFreeSpace += block.memoryUse;
             }
+            else
+                movedProcessNum++;
         }
         totalFreeSpace += accumulatedFree;
         
@@ -337,15 +352,18 @@ public class MemoryProcessList {
         for (int i = splitIndex; i < processChain.size(); i++) {
             if (!processChain.get(i).isAvailble) {
                 newChain.add(processChain.get(i));
+                movedProcessNum++;
             }
         }
         
         // Update memory
         setProcessChain(newChain);
         setSpaceRemaining(totalFreeSpace);
+
+        return new DefragmentationResult(true, movedProcessNum);
     }
 
-    public void compactHeuristically(int processSize) {
+    public DefragmentationResult compactHeuristically(int processSize) {
         // Variables to track best results from moving processes
         int left = -1;
         int numProcesses = Integer.MAX_VALUE;
@@ -417,8 +435,7 @@ public class MemoryProcessList {
         }
 
         if (left == -1) {
-            System.out.println("No best fitting locations");
-            return;
+            return new DefragmentationResult(false, 0);
         }
         
         // Look for a free block that can fit the moved processes
@@ -467,6 +484,8 @@ public class MemoryProcessList {
             }
         }
         setSpaceRemaining(totalFree);
+
+        return new DefragmentationResult(true, processedMoved.size());
     }
 
     public void addProcessRightAligned(int processId, int processSize) {

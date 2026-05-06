@@ -46,22 +46,49 @@ public class App {
 
         app.post("/api/swap", ctx -> {
             ProcessData data = ctx.bodyAsClass(ProcessData.class);
-            l.swap(data.pid, data.memory);
+            var result = l.swap(data.pid, data.memory);
+            if (!result.success) {
+                ctx.status(400);
+                ctx.result("Swapping failed, processSize: " + data.memory);
+                return;
+            }
+            
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_to_end", ctx -> {
-            l.compactToEnd();
+            int memory = ctx.bodyAsClass(MemoryRequest.class).memory;
+            var result = l.compactToEnd(memory);
+            if (!result.success) {
+                ctx.status(400);
+                ctx.result("Compacting to End failed, processSize: " + memory);
+                return;
+            }
+
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_until_large_hole", ctx -> {
-            l.compactUntilLargeHole(ctx.bodyAsClass(MemoryRequest.class).memory);
+            int memory = ctx.bodyAsClass(MemoryRequest.class).memory;
+            var result = l.compactUntilLargeHole(memory);
+            if (!result.success) {
+                ctx.status(400);
+                ctx.result("Compacting until Large Hole failed, processSize: " + memory);
+                return;
+            }
+
             ctx.json(l.getDataForFrontend());
         });
 
         app.post("/api/compact_heuristically", ctx -> {
-            l.compactHeuristically(ctx.bodyAsClass(MemoryRequest.class).memory);
+            int memory = ctx.bodyAsClass(MemoryRequest.class).memory;
+            var result = l.compactHeuristically(memory);
+            if (!result.success) {
+                ctx.status(400);
+                ctx.result("Compacting Heuristically failed, processSize: " + memory);
+                return;
+            }
+
             ctx.json(l.getDataForFrontend());
         });
     }
