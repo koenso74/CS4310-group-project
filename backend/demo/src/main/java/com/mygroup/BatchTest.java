@@ -54,14 +54,14 @@ public class BatchTest {
             }
             l.setProcessChain(temp.getProcessChain());
 
-            // var r4 = l.compactHeuristically(memorySize);
-            // if (r4.success) {
-            //     successCounts[3]++;
-            //     avgMovedProcessNums[3] += r4.movedProcessNum;
-            // }
+            var r4 = l.compactHeuristically(memorySize);
+            if (r4.success) {
+                successCounts[3]++;
+                avgMovedProcessNums[3] += r4.movedProcessNum;
+            }
         }
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             avgMovedProcessNums[i] /= successCounts[i];
             System.out.println(successCounts[i] + ", " + avgMovedProcessNums[i]);
         }

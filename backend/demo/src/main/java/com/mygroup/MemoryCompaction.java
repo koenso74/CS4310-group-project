@@ -1,5 +1,6 @@
 package com.mygroup;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Scanner;
 
@@ -98,17 +99,28 @@ public class MemoryCompaction {
         memoryList.setSpaceRemaining(totalFreeSpace);
     }
 
-    public static void compactHeuristically(MemoryProcessList memoryList, int processSize) {
+    public static DefragmentationResult compactHeuristically(MemoryProcessList memoryList, int processSize) {
         // Get current process chain
         LinkedList<MemoryProcessList.MyProcess> currentChain = memoryList.getProcessChain();
-    
+
+        // Check if there's already enough contiguous free space
+        int largestFree = 0;
+        for (MemoryProcessList.MyProcess p : currentChain) {
+            if (p.isAvailble && p.memoryUse > largestFree) {
+                largestFree = p.memoryUse;
+            }
+        }
+        if (largestFree >= processSize) {
+            return new DefragmentationResult(true, 0);
+        }
+
         // Variables to track best results from moving processes
         int left = -1;
         int numProcesses = Integer.MAX_VALUE;
         int totalProcessSize = Integer.MAX_VALUE;
         LinkedList<Integer> processesToMove = null;
         int bestDestIndex = -1;
-        
+
         // Loop to determine what process to move to gain the largest amount of memory
         for (int i = 0; i < currentChain.size(); i++) {
             if (currentChain.get(i).isAvailble) {
@@ -120,19 +132,11 @@ public class MemoryCompaction {
                     if (currentChain.get(j).isAvailble) {
                         runningTotal += currentChain.get(j).memoryUse;
                         
-                        // If process fits within the total space of the free + processes + free blocks
                         if (runningTotal >= processSize) {
-
                             // Check if there is a valid destination for these processes
                             int tempDestIndex = -1;
                             for (int k = 0; k < currentChain.size(); k++) {
-                                if (currentChain.get(k).isAvailble) {
-                                    // Prevents use of currently used free blocks
-                                    if (k >= i && k <= j) {
-                                        continue;
-                                    }
-
-                                    // Check if free block can fit the processes
+                                if (currentChain.get(k).isAvailble && (k < i || k > j)) {
                                     if (currentChain.get(k).memoryUse >= sizeOfProcess) {
                                         tempDestIndex = k;
                                         break;
@@ -140,18 +144,14 @@ public class MemoryCompaction {
                                 }
                             }
                             
-                            // If a valid destination exists
                             if (tempDestIndex != -1) {
-                                // Compare with current best
-                                if (processCount < numProcesses || (processCount == numProcesses && sizeOfProcess < totalProcessSize)) {
-                                    
-                                    // Update values
+                                if (processCount < numProcesses || 
+                                    (processCount == numProcesses && sizeOfProcess < totalProcessSize)) {
                                     left = i;
                                     numProcesses = processCount;
                                     totalProcessSize = sizeOfProcess;
                                     bestDestIndex = tempDestIndex;
                                     
-                                    // Record which processes to move
                                     processesToMove = new LinkedList<>();
                                     for (int k = i + 1; k < j; k++) {
                                         if (!currentChain.get(k).isAvailble) {
@@ -163,7 +163,6 @@ public class MemoryCompaction {
                         }
                         break;
                     } else {
-                        // Add process values to current values
                         runningTotal += currentChain.get(j).memoryUse;
                         processCount++;
                         sizeOfProcess += currentChain.get(j).memoryUse;
@@ -172,34 +171,32 @@ public class MemoryCompaction {
             }
         }
 
-        if (left == -1) {
-            System.out.println("No best fitting locations");
-            return;
+        if (left == -1 || processesToMove == null || processesToMove.isEmpty()) {
+            return new DefragmentationResult(false, 0);
         }
-        
-        // Look for a free block that can fit the moved processes
-        int destIndex = bestDestIndex;
+
+        // Sort into descending order
+        Collections.sort(processesToMove, Collections.reverseOrder());
+
+        // Collect the processes to be moved
         LinkedList<MemoryProcessList.MyProcess> processedMoved = new LinkedList<>();
         for (int idx : processesToMove) {
             processedMoved.add(currentChain.get(idx));
         }
-        
+
         // Remove processes from their original positions
-        for (int i = processesToMove.size() - 1; i >= 0; i--) {
-            currentChain.remove((int)processesToMove.get(i));
+        for (int idx : processesToMove) {
+            currentChain.remove(idx);
         }
-        
-        // Adjust destIndex if it changed due to removals
-        int adjustedDestIndex = destIndex;
-        if (destIndex > processesToMove.get(0)) {
-            // If destination was after removed processes, adjust index
-            for (int idx : processesToMove) {
-                if (destIndex > idx) {
-                    adjustedDestIndex--;
-                }
+
+        // Adjust the best destination index if it changed due to removals
+        int adjustedDestIndex = bestDestIndex;
+        for (int idx : processesToMove) {
+            if (bestDestIndex > idx) {
+                adjustedDestIndex--;
             }
         }
-    
+
         // Insert moved processes at destination
         int insertIndex = adjustedDestIndex + 1;
         currentChain.addAll(insertIndex, processedMoved);
@@ -211,10 +208,10 @@ public class MemoryCompaction {
         } else {
             currentChain.remove(adjustedDestIndex);
         }
-        
+
         // Update memory
         memoryList.setProcessChain(currentChain);
-        
+
         // Recalculate total free space
         int totalFree = 0;
         for (MemoryProcessList.MyProcess p : currentChain) {
@@ -223,6 +220,8 @@ public class MemoryCompaction {
             }
         }
         memoryList.setSpaceRemaining(totalFree);
+
+        return new DefragmentationResult(true, numProcesses);
     }
 
     public static void main(String[] args) {
@@ -305,12 +304,12 @@ public class MemoryCompaction {
         
         for (MemoryProcessList.MyProcess p : memory.getProcessChain()) {
             String type = p.isAvailble ? "FREE     " : "PROCESS " + p.PID;
-            System.out.printf("   [%5.0f - %5.0f] | %s | %5.0f\n", currentAddress, currentAddress + p.memoryUse, type, p.memoryUse);
+            System.out.printf("   [%5d - %5d] | %s | %5d\n", currentAddress, currentAddress + p.memoryUse, type, p.memoryUse);
             currentAddress += p.memoryUse;
         }
         
         System.out.println("   -----------------|---------|-------");
-        System.out.printf("   Total: %.0f units | Free: %.0f units\n", memory.getMAX_SPACE(), memory.getSpaceRemaining());
+        System.out.printf("   Total: %d units | Free: %d units\n", memory.getMAX_SPACE(), memory.getSpaceRemaining());
     }
 
 }

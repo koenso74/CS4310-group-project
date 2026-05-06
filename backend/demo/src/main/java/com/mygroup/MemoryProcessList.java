@@ -1,5 +1,6 @@
 package com.mygroup;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Random;
 
@@ -362,6 +363,17 @@ public class MemoryProcessList {
     }
 
     public DefragmentationResult compactHeuristically(int processSize) {
+        // Check if there is already enough contiguous free space
+        int largestFree = 0;
+        for (MemoryProcessList.MyProcess p : processChain) {
+            if (p.isAvailble && p.memoryUse > largestFree) {
+                largestFree = p.memoryUse;
+            }
+        }
+        if (largestFree >= processSize) {
+            return new DefragmentationResult(true, 0);
+        }
+        
         // Variables to track best results from moving processes
         int left = -1;
         int numProcesses = Integer.MAX_VALUE;
@@ -432,30 +444,29 @@ public class MemoryProcessList {
             }
         }
 
-        if (left == -1) {
+        if (left == -1 || processesToMove == null || processesToMove.isEmpty()) {
             return new DefragmentationResult(false, 0);
         }
         
-        // Look for a free block that can fit the moved processes
-        int destIndex = bestDestIndex;
+        // Sort into descending order
+        Collections.sort(processesToMove, Collections.reverseOrder());
+        
+        // Collect the processes to be moved
         LinkedList<MemoryProcessList.MyProcess> processedMoved = new LinkedList<>();
         for (int idx : processesToMove) {
             processedMoved.add(processChain.get(idx));
         }
         
         // Remove processes from their original positions
-        for (int i = processesToMove.size() - 1; i >= 0; i--) {
-            processChain.remove((int)processesToMove.get(i));
+        for (int idx : processesToMove) {
+            processChain.remove(idx);
         }
         
-        // Adjust destIndex if it changed due to removals
-        int adjustedDestIndex = destIndex;
-        if (destIndex > processesToMove.get(0)) {
-            // If destination was after removed processes, adjust index
-            for (int idx : processesToMove) {
-                if (destIndex > idx) {
-                    adjustedDestIndex--;
-                }
+        // Adjust the best destination index if it changed due to removals
+        int adjustedDestIndex = bestDestIndex;
+        for (int idx : processesToMove) {
+            if (bestDestIndex > idx) {
+                adjustedDestIndex--;
             }
         }
     
