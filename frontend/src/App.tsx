@@ -381,7 +381,6 @@ function App() {
                   left: `${(start / TOTAL_MEM) * UI_WIDTH}px`,
                   width: `${(size / TOTAL_MEM) * UI_WIDTH}px`,
                   height: "100px",
-                  // Change color based on whether it is a process or a hole (PID 0)
                   backgroundColor: pid === 0 ? "#f0f0f0" : "#4a90e2",
                   border: pid === 0 ? "1px dashed #ccc" : "1px solid white",
                   color: pid === 0 ? "#666" : "white",
@@ -389,10 +388,9 @@ function App() {
                   alignItems: "center",
                   justifyContent: "center",
                   boxSizing: "border-box",
-                  flexDirection: "column", // Stack PID/Hole text and size
+                  flexDirection: "column",
                 }}
               >
-                {/* Display 'Hole' and size if PID is 0, otherwise display 'P' + PID */}
                 {pid === 0 ? (
                   <>
                     <span
@@ -412,7 +410,6 @@ function App() {
                   <strong>P{pid}</strong>
                 )}
 
-                {/* Optional: Always show size inside the block for processes too */}
                 {pid !== 0 && (
                   <span style={{ fontSize: "10px" }}>{size}KB</span>
                 )}
@@ -439,7 +436,7 @@ function App() {
                     fontWeight: "bold",
                   }}
                 >
-                  {start + size} {/* end is start + size */}
+                  {start + size}
                 </span>
               </div>
             );
