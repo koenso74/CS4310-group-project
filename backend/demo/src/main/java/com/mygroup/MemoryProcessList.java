@@ -576,13 +576,12 @@ public class MemoryProcessList {
         int start = 0;
         for (int i = 0; i < processChain.size(); i++) {
             var process = processChain.get(i);
-            if (!process.isAvailble) {
-                LinkedList<Integer> processData = new LinkedList<>();
-                processData.add(process.PID);
-                processData.add(start);
-                processData.add((int)process.memoryUse);
-                data.add(processData);
-            }
+            LinkedList<Integer> processData = new LinkedList<>();
+            processData.add(process.PID);
+            processData.add(start);
+            processData.add((int)process.memoryUse);
+            data.add(processData);
+
             start += process.memoryUse;
         }
 
@@ -622,6 +621,8 @@ public class MemoryProcessList {
         }
 
         spaceRemaining = spaceHole;
+
+        combine();
     }
 
     public void Clear() {

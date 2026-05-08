@@ -372,7 +372,6 @@ function App() {
         >
           {processList.map((proc, index) => {
             const [pid, start, size] = proc;
-            const end = start + size;
 
             return (
               <div
@@ -382,16 +381,41 @@ function App() {
                   left: `${(start / TOTAL_MEM) * UI_WIDTH}px`,
                   width: `${(size / TOTAL_MEM) * UI_WIDTH}px`,
                   height: "100px",
-                  backgroundColor: "#4a90e2",
-                  border: "1px solid white",
-                  color: "white",
+                  // Change color based on whether it is a process or a hole (PID 0)
+                  backgroundColor: pid === 0 ? "#f0f0f0" : "#4a90e2",
+                  border: pid === 0 ? "1px dashed #ccc" : "1px solid white",
+                  color: pid === 0 ? "#666" : "white",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   boxSizing: "border-box",
+                  flexDirection: "column", // Stack PID/Hole text and size
                 }}
               >
-                <strong>P{pid}</strong>
+                {/* Display 'Hole' and size if PID is 0, otherwise display 'P' + PID */}
+                {pid === 0 ? (
+                  <>
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "#333",
+                      }}
+                    >
+                      Hole
+                    </span>
+                    <span style={{ fontSize: "11px", color: "#333" }}>
+                      {size}KB
+                    </span>
+                  </>
+                ) : (
+                  <strong>P{pid}</strong>
+                )}
+
+                {/* Optional: Always show size inside the block for processes too */}
+                {pid !== 0 && (
+                  <span style={{ fontSize: "10px" }}>{size}KB</span>
+                )}
 
                 <span
                   style={{
@@ -415,7 +439,7 @@ function App() {
                     fontWeight: "bold",
                   }}
                 >
-                  {end}
+                  {start + size} {/* end is start + size */}
                 </span>
               </div>
             );
@@ -586,7 +610,7 @@ function App() {
             padding: "10px 20px",
           }}
         >
-          {loading ? "Running 100 Tests..." : "Run Batch Comparison Test"}
+          {loading ? "Running 100 Tests..." : "Run Batch Test"}
         </button>
 
         {batchResults && (
