@@ -450,51 +450,120 @@ public class MemoryProcessList {
         
         // Sort into descending order
         Collections.sort(processesToMove, Collections.reverseOrder());
-        
+
         // Collect the processes to be moved
         LinkedList<MemoryProcessList.MyProcess> processedMoved = new LinkedList<>();
         for (int idx : processesToMove) {
             processedMoved.add(processChain.get(idx));
         }
-        
-        // Remove processes from their original positions
-        for (int idx : processesToMove) {
-            processChain.remove(idx);
-        }
-        
-        // Adjust the best destination index if it changed due to removals
-        int adjustedDestIndex = bestDestIndex;
-        for (int idx : processesToMove) {
-            if (bestDestIndex > idx) {
-                adjustedDestIndex--;
+
+        // Find the right free block
+        int processIndex = processesToMove.get(0);
+        int rightFreeIndex = -1;
+        for (int i = processIndex + 1; i < processChain.size(); i++) {
+            if (processChain.get(i).isAvailble) {
+                rightFreeIndex = i;
+                break;
             }
         }
-    
-        // Insert moved processes at destination
-        int insertIndex = adjustedDestIndex + 1;
-        processChain.addAll(insertIndex, processedMoved);
 
-        // Handle the free block at destination
-        int remainingFree = processChain.get(adjustedDestIndex).memoryUse - totalProcessSize;
-        if (remainingFree > 0) {
-            processChain.get(adjustedDestIndex).memoryUse = remainingFree;
-        } else {
-            processChain.remove(adjustedDestIndex);
+        // Get the left free block
+        int leftFreeIndex = -1;
+        for (int i = processIndex - 1; i >= 0; i--) {
+            if (processChain.get(i).isAvailble) {
+                leftFreeIndex = i;
+                break;
+            }
         }
-        
-        // Update memory
-        setProcessChain(processChain);
-        
+
+        // Build new proccess chain
+        LinkedList<MemoryProcessList.MyProcess> newChain = new LinkedList<>();
+
+        if (bestDestIndex < leftFreeIndex) {
+            // Destination is before left free block
+            
+            // Add everything before destination
+            for (int i = 0; i < bestDestIndex; i++) {
+                newChain.add(processChain.get(i));
+            }
+            
+            // Handle destination free block
+            int destFreeSize = processChain.get(bestDestIndex).memoryUse;
+            int remainingFree = destFreeSize - processedMoved.get(0).memoryUse;
+            if (remainingFree > 0) {
+                newChain.add(new MemoryProcessList.MyProcess(0, remainingFree, true));
+                newChain.add(processedMoved.get(0));
+            } else {
+                newChain.add(processedMoved.get(0));
+            }
+            
+            // Add everything between destination and left free block
+            for (int i = bestDestIndex + 1; i < leftFreeIndex; i++) {
+                if (i != processIndex) {
+                    newChain.add(processChain.get(i));
+                }
+            }
+            
+            // Add the consolidated free block (left free + moved process + right free)
+            int consolidatedFree = processChain.get(leftFreeIndex).memoryUse + processedMoved.get(0).memoryUse + processChain.get(rightFreeIndex).memoryUse;
+            newChain.add(new MemoryProcessList.MyProcess(0, consolidatedFree, true));
+            
+            // Add everything after right free block
+            for (int i = rightFreeIndex + 1; i < processChain.size(); i++) {
+                if (i != processIndex) {
+                    newChain.add(processChain.get(i));
+                }
+            }
+            
+        } else {
+            // Destination is after right free block
+            
+            // Add everything before left free block
+            for (int i = 0; i < leftFreeIndex; i++) {
+                newChain.add(processChain.get(i));
+            }
+            
+            // Add consolidated free block (left free + moved process + right free)
+            int consolidatedFree = processChain.get(leftFreeIndex).memoryUse + processedMoved.get(0).memoryUse + processChain.get(rightFreeIndex).memoryUse;
+            newChain.add(new MemoryProcessList.MyProcess(0, consolidatedFree, true));
+            
+            // Add everything between right free block and destination
+            for (int i = rightFreeIndex + 1; i < bestDestIndex; i++) {
+                if (i != processIndex) {
+                    newChain.add(processChain.get(i));
+                }
+            }
+            
+            // Handle destination free block
+            int destFreeSize = processChain.get(bestDestIndex).memoryUse;
+            int remainingFree = destFreeSize - processedMoved.get(0).memoryUse;
+            if (remainingFree > 0) {
+                newChain.add(new MemoryProcessList.MyProcess(0, remainingFree, true));
+                newChain.add(processedMoved.get(0));
+            } else {
+                newChain.add(processedMoved.get(0));
+            }
+            
+            // Add everything after destination
+            for (int i = bestDestIndex + 1; i < processChain.size(); i++) {
+                if (i != processIndex) {
+                    newChain.add(processChain.get(i));
+                }
+            }
+        }
+
+        setProcessChain(newChain);
+
         // Recalculate total free space
         int totalFree = 0;
-        for (MemoryProcessList.MyProcess p : processChain) {
+        for (MemoryProcessList.MyProcess p : newChain) {
             if (p.isAvailble) {
                 totalFree += p.memoryUse;
             }
         }
         setSpaceRemaining(totalFree);
 
-        return new DefragmentationResult(true, processesToMove.size());
+        return new DefragmentationResult(true, processedMoved.size());
     }
 
     public void addProcessRightAligned(int processId, int processSize) {
